@@ -1,39 +1,58 @@
 interface Env {
-    AURA_CACHE: KVNamespace;
-    AURA_ASSETS: R2Bucket;
+    GEMINI_API_KEY: string;
 }
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
-        
-        // 1. Hardening Perimetral en Capa de Aplicación (Filtro de métodos HTTP)
-        if (request.method !== "GET" && request.method !== "POST") {
-            return new Response("Método No Permitido", { status: 405 });
+
+        const corsHeaders = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "X-Content-Type-Options": "nosniff"
+        };
+
+        if (request.method === "OPTIONS") {
+            return new Response(null, { headers: corsHeaders });
         }
 
-        // 2. Lógica de Enrutamiento Dinámico en el Edge
-        if (url.pathname === "/api/config") {
-            // Intenta extraer configuración global desde Cloudflare KV distribuidor
-            const cachedConfig = await env.AURA_CACHE.get("global_config");
-            return new Response(cachedConfig || JSON.stringify({ status: "online", version: "v2.0.0" }), {
-                headers: { "Content-Type": "application/json" }
-            });
+        // Endpoint de consulta IA que sustituye la funcionalidad de Antigravity
+        if (url.pathname === "/api/chat" && request.method === "POST") {
+            try {
+                const body: any = await request.json();
+                const userMessage = body.message || "Hola";
+
+                // Petición directa al Core de Google AI Studio con tu API Key segura
+                const googleApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+
+                const aiResponse = await fetch(googleApiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userMessage }] }]
+                    })
+                });
+
+                const aiData: any = await aiResponse.json();
+                const replyText = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "Sin respuesta del modelo.";
+
+                return new Response(JSON.stringify({ success: true, response: replyText }), {
+                    status: 200,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
+
+            } catch (error: any) {
+                return new Response(JSON.stringify({ success: false, error: error.message }), {
+                    status: 500,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
+            }
         }
 
-        // 3. Respuesta base con cabeceras estrictas de seguridad (Mitigación OWASP)
-        const response = new Response("Proyecto Aura V2: Arquitectura de Alta Disponibilidad Validada.", {
+        return new Response("<h1>Entorno Sandbox: Clon de Pruebas Activo y Conectado a AI Studio</h1>", {
             status: 200,
-            headers: { "Content-Type": "text/plain; charset=utf-8" }
+            headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" }
         });
-
-        // Inyección de políticas de seguridad HTTP (Security Headers)
-        response.headers.set("X-Content-Type-Options", "nosniff");
-        response.headers.set("X-Frame-Options", "DENY");
-        response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-        response.headers.set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none';");
-        response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-
-        return response;
     },
 };

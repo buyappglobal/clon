@@ -1,7 +1,13 @@
 {
-  "name": "proyecto-aura-v2",
-  "main": "src/index.ts",
+  "name": "clon",
+  "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-06-07",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "ENVIRONMENT": "sandbox"
+  },
   "observability": {
     "enabled": true
   }
