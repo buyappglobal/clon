@@ -1,0 +1,8 @@
+{
+  "name": "proyecto-aura-v2",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-07",
+  "observability": {
+    "enabled": true
+  }
+}
